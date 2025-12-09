@@ -4,6 +4,7 @@ from recommender.models import (
     ActivitySuggestion,
     Career,
     EducationStage,
+    LearningResource,
     MotivationTip,
     Question,
     OptionScore,
@@ -181,6 +182,9 @@ class Command(BaseCommand):
         easy, _ = SkillDifficulty.objects.get_or_create(code=SkillDifficulty.EASY, defaults={"label": "Easy"})
         medium, _ = SkillDifficulty.objects.get_or_create(code=SkillDifficulty.MEDIUM, defaults={"label": "Medium"})
         hard, _ = SkillDifficulty.objects.get_or_create(code=SkillDifficulty.HARD, defaults={"label": "Hard"})
+
+        # Create learning resources (YouTube videos, articles, etc.)
+        self.create_learning_resources(stages, science, commerce, arts, vocational)
 
         # Skills and paths (example: Cloud Support Engineer)
         linux, _ = Skill.objects.get_or_create(name="Linux Basics")
@@ -670,3 +674,368 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(self.style.SUCCESS("Seeding completed."))
+
+    def create_learning_resources(self, stages, science, commerce, arts, vocational):
+        """Create sample learning resources including YouTube videos for different streams."""
+        
+        # Science stream resources
+        LearningResource.objects.get_or_create(
+            title="Introduction to Physics - Basic Concepts",
+            url="https://www.youtube.com/watch?v=ZM8ECpQHNUM",
+            defaults={
+                "description": "Basic physics concepts for high school students",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": science,
+                "duration_minutes": 15,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Chemistry Experiments at Home",
+            url="https://www.youtube.com/watch?v=lpvEd94rdeY",
+            defaults={
+                "description": "Safe chemistry experiments you can do at home",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": science,
+                "duration_minutes": 20,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Mathematics: Calculus Basics",
+            url="https://www.youtube.com/watch?v=HfACrKJ_Y2w",
+            defaults={
+                "description": "Introduction to calculus concepts for beginners",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": science,
+                "duration_minutes": 25,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Biology: Cell Structure and Functions",
+            url="https://www.youtube.com/watch?v=41_NPkvx19M",
+            defaults={
+                "description": "Detailed explanation of cell biology",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": science,
+                "duration_minutes": 18,
+            }
+        )
+        
+        # Engineering preparation resources
+        LearningResource.objects.get_or_create(
+            title="JEE Main Preparation Strategy",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "Effective preparation strategy for JEE Main examination",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": science,
+                "duration_minutes": 22,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="NEET Biology Preparation Tips",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "How to prepare effectively for NEET Biology section",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": science,
+                "duration_minutes": 19,
+            }
+        )
+        
+        # Commerce stream resources
+        LearningResource.objects.get_or_create(
+            title="Basics of Accounting Principles",
+            url="https://www.youtube.com/watch?v=UFc08zFU3f8",
+            defaults={
+                "description": "Introduction to accounting fundamentals",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": commerce,
+                "duration_minutes": 22,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Business Studies: Entrepreneurship",
+            url="https://www.youtube.com/watch?v=68kG2t0G7NM",
+            defaults={
+                "description": "Understanding entrepreneurship and business creation",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": commerce,
+                "duration_minutes": 19,
+            }
+        )
+        
+        # CA preparation resources
+        LearningResource.objects.get_or_create(
+            title="CA Foundation Preparation Guide",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "Complete guide to preparing for CA Foundation exams",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": commerce,
+                "duration_minutes": 25,
+            }
+        )
+        
+        # Arts stream resources
+        LearningResource.objects.get_or_create(
+            title="History: Ancient Civilizations",
+            url="https://www.youtube.com/watch?v=q4GdJVvdxss",
+            defaults={
+                "description": "Overview of ancient civilizations and their contributions",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": arts,
+                "duration_minutes": 24,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Political Science: Government Systems",
+            url="https://www.youtube.com/watch?v=rAhA3Z5R4CU",
+            defaults={
+                "description": "Different types of government systems around the world",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": arts,
+                "duration_minutes": 21,
+            }
+        )
+        
+        # Law preparation resources
+        LearningResource.objects.get_or_create(
+            title="CLAT Preparation Strategy",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "Effective strategy for CLAT law entrance exam",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "stream": arts,
+                "duration_minutes": 23,
+            }
+        )
+        
+        # Programming and tech resources for all streams
+        LearningResource.objects.get_or_create(
+            title="Python Programming for Beginners",
+            url="https://www.youtube.com/watch?v=_uQrJ0TkZlc",
+            defaults={
+                "description": "Complete Python tutorial for absolute beginners",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.UG],
+                "duration_minutes": 300,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Web Development Full Course",
+            url="https://www.youtube.com/watch?v=Q33KBiDriJY",
+            defaults={
+                "description": "Learn HTML, CSS, JavaScript in one course",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.UG],
+                "duration_minutes": 240,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Data Science with Python",
+            url="https://www.youtube.com/watch?v=LHBE6Q9XlzI",
+            defaults={
+                "description": "Complete data science tutorial using Python",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.UG],
+                "duration_minutes": 360,
+            }
+        )
+        
+        # Career switching resources
+        LearningResource.objects.get_or_create(
+            title="Career Change: From Accountant to Data Analyst",
+            url="https://www.youtube.com/watch?v=5k38wN6RgMs",
+            defaults={
+                "description": "How to transition from accounting to data analysis",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.PROFESSIONAL],
+                "duration_minutes": 25,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Cloud Computing Basics for IT Professionals",
+            url="https://www.youtube.com/watch?v=1pG4ATCx61A",
+            defaults={
+                "description": "Introduction to cloud computing for IT professionals",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.PROFESSIONAL],
+                "duration_minutes": 35,
+            }
+        )
+        
+        # Additional career switching resources
+        LearningResource.objects.get_or_create(
+            title="Transitioning from Sales to Digital Marketing",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "Complete guide to moving from sales to digital marketing",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.PROFESSIONAL],
+                "duration_minutes": 28,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="From Teacher to Instructional Designer",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "How educators can transition to instructional design roles",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.PROFESSIONAL],
+                "duration_minutes": 26,
+            }
+        )
+        
+        # General motivation and study resources
+        LearningResource.objects.get_or_create(
+            title="How to Study Effectively",
+            url="https://www.youtube.com/watch?v=pQ348JVT6IU",
+            defaults={
+                "description": "Proven techniques to improve your studying",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "duration_minutes": 15,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Time Management Tips for Students",
+            url="https://www.youtube.com/watch?v=iU4/2i8Lw1o",
+            defaults={
+                "description": "Effective time management strategies for students",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.HIGH_SCHOOL],
+                "duration_minutes": 12,
+            }
+        )
+        
+        # Professional development resources
+        LearningResource.objects.get_or_create(
+            title="Networking Tips for Career Changers",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "How to build professional networks when changing careers",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.PROFESSIONAL],
+                "duration_minutes": 20,
+            }
+        )
+        
+        LearningResource.objects.get_or_create(
+            title="Building a Portfolio for Career Transition",
+            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            defaults={
+                "description": "Creating impactful portfolios to showcase transferable skills",
+                "resource_type": "VIDEO",
+                "stage": stages[EducationStage.PROFESSIONAL],
+                "duration_minutes": 22,
+            }
+        )
+        
+        # Create sample milestones
+        from recommender.models import Milestone
+        
+        # Bronze milestones
+        Milestone.objects.get_or_create(
+            name="First Step",
+            defaults={
+                "description": "Complete your first skill step",
+                "badge_type": Milestone.BADGE_BRONZE,
+                "required_completed_steps": 1
+            }
+        )
+        
+        # Create sample feedback
+        from recommender.models import Feedback
+        
+        # Sample feedback entries
+        Feedback.objects.get_or_create(
+            feedback_type="RECOMMENDATION",
+            rating=5,
+            comment="The career recommendations were very helpful and aligned with my interests.",
+            suggestion="Add more career options for creative fields."
+        )
+        
+        Feedback.objects.get_or_create(
+            feedback_type="UI_EXPERIENCE",
+            rating=4,
+            comment="The interface is clean and easy to navigate.",
+            suggestion="Consider adding dark mode for better eye comfort during long sessions."
+        )
+        
+        Feedback.objects.get_or_create(
+            feedback_type="FEATURE_REQUEST",
+            comment="Would love to see a feature for setting reminders for skill practice.",
+            suggestion="Add notification system for daily learning reminders."
+        )
+        
+        Milestone.objects.get_or_create(
+            name="Getting Started",
+            defaults={
+                "description": "Complete 3 skill steps",
+                "badge_type": Milestone.BADGE_BRONZE,
+                "required_completed_steps": 3
+            }
+        )
+        
+        # Silver milestones
+        Milestone.objects.get_or_create(
+            name="Making Progress",
+            defaults={
+                "description": "Complete 5 skill steps",
+                "badge_type": Milestone.BADGE_SILVER,
+                "required_completed_steps": 5
+            }
+        )
+        
+        Milestone.objects.get_or_create(
+            name="Half Way There",
+            defaults={
+                "description": "Reach 50% completion on your skill path",
+                "badge_type": Milestone.BADGE_SILVER,
+                "required_progress_percent": 50
+            }
+        )
+        
+        # Gold milestones
+        Milestone.objects.get_or_create(
+            name="Consistency King",
+            defaults={
+                "description": "Maintain a 5-day learning streak",
+                "badge_type": Milestone.BADGE_GOLD,
+                "required_streak_days": 5
+            }
+        )
+        
+        Milestone.objects.get_or_create(
+            name="Path Master",
+            defaults={
+                "description": "Complete 100% of your skill path",
+                "badge_type": Milestone.BADGE_GOLD,
+                "required_progress_percent": 100
+            }
+        )
+
+        self.stdout.write(self.style.SUCCESS("Successfully seeded all data including milestones"))

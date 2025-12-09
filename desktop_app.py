@@ -17,7 +17,7 @@ print("Django setup completed successfully.")
 
 import pyttsx3
 
-from recommender.models import EducationStage, Question, OptionScore, Stream, UserProfile  # noqa: E402
+from recommender.models import EducationStage, Question, OptionScore, Stream, UserProfile, Feedback  # noqa: E402
 from recommender import services  # noqa: E402
 
 
@@ -539,6 +539,14 @@ class ScreenManager(tk.Tk):
             self.tts_engine = pyttsx3.init()
             self.tts_engine.setProperty('rate', 150)  # Speed of speech
             self.tts_engine.setProperty('volume', 0.9)  # Volume level (0.0 to 1.0)
+            
+            # Get available voices and set a clear, pleasant voice
+            voices = self.tts_engine.getProperty('voices')
+            # Try to select a female voice if available (often clearer for instructions)
+            for voice in voices:
+                if 'female' in voice.name.lower() or 'zira' in voice.name.lower():
+                    self.tts_engine.setProperty('voice', voice.id)
+                    break
         except Exception as e:
             print(f"Text-to-speech initialization failed: {e}")
             self.tts_engine = None
@@ -605,8 +613,11 @@ class ScreenManager(tk.Tk):
                 ResultsScreen,
                 SkillRoadmapScreen,
                 ProgressScreen,
+                DashboardScreen,  # New dashboard screen
                 HistoryScreen,
                 AnalyticsScreen,
+                FeedbackScreen,  # New feedback screen
+                AccessibilitySettingsScreen,  # New accessibility settings screen
             ):
                 frame = F(parent=container, controller=self)
                 self.frames[F.__name__] = frame
@@ -620,8 +631,9 @@ class ScreenManager(tk.Tk):
                 "ResultsScreen": (5, "Recommendations"),
                 "SkillRoadmapScreen": (6, "Skill paths"),
                 "ProgressScreen": (7, "Progress tracking"),
-                "HistoryScreen": (7, "History"),
-                "AnalyticsScreen": (7, "Analytics"),
+                "DashboardScreen": (8, "Dashboard"),
+                "HistoryScreen": (8, "History"),
+                "AnalyticsScreen": (8, "Analytics"),
             }
 
             self.show_frame("HomeScreen")
@@ -663,6 +675,23 @@ class ScreenManager(tk.Tk):
                 self.tts_engine.runAndWait()
             except Exception as e:
                 print(f"Text-to-speech failed: {e}")
+    
+    def speak_section(self, title: str, content: str):
+        """Speak a section with title and content separately for better clarity."""
+        if self.tts_engine:
+            try:
+                self.tts_engine.say(f"{title}. {content}")
+                self.tts_engine.runAndWait()
+            except Exception as e:
+                print(f"Text-to-speech failed: {e}")
+    
+    def stop_speech(self):
+        """Stop any ongoing speech."""
+        if self.tts_engine:
+            try:
+                self.tts_engine.stop()
+            except Exception as e:
+                print(f"Failed to stop speech: {e}")
 
 
 class BaseScreen(ttk.Frame):
@@ -1087,6 +1116,9 @@ class ResultsScreen(BaseScreen):
         if not user or not stage:
             return
 
+        # Stop any ongoing speech
+        self.controller.stop_speech()
+
         # Collect text to read
         texts_to_read = []
         
@@ -1173,7 +1205,8 @@ class SkillRoadmapScreen(BaseScreen):
             if best:
                 stream = best["stream"]
 
-        paths = services.get_skill_paths_for_target(stage, stream, getattr(user, "target_role", ""))
+        profile = services.InterestProfile.from_option_scores(self.controller.interest_answers)
+        paths = services.get_skill_paths_for_target(stage, stream, getattr(user, "target_role", ""), profile)
         if not paths:
             frame = ttk.Frame(self.notebook, padding=12, style="Card.TFrame")
             self.notebook.add(frame, text="No paths")
@@ -1248,6 +1281,9 @@ class SkillRoadmapScreen(BaseScreen):
         if not user or not stage:
             return
 
+        # Stop any ongoing speech
+        self.controller.stop_speech()
+
         # Collect text to read
         texts_to_read = ["Here are your skill path roadmaps:"]
         
@@ -1257,7 +1293,8 @@ class SkillRoadmapScreen(BaseScreen):
             if best:
                 stream = best["stream"]
 
-        paths = services.get_skill_paths_for_target(stage, stream, getattr(user, "target_role", ""))
+        profile = services.InterestProfile.from_option_scores(self.controller.interest_answers)
+        paths = services.get_skill_paths_for_target(stage, stream, getattr(user, "target_role", ""), profile)
         if not paths:
             texts_to_read.append("No skill paths are currently defined.")
         else:
@@ -1285,8 +1322,32 @@ class ProgressScreen(BaseScreen):
 
         ttk.Label(self.card, text="Skill Path Progress", font=("Segoe UI", 16, "bold")).pack(pady=(0, 10))
 
+        # Progress visualization frame
+        self.progress_frame = ttk.Frame(self.card)
+        self.progress_frame.pack(fill="x", pady=10)
+        
+        # Progress bar
+        self.progress_bar = ttk.Progressbar(self.progress_frame, orient="horizontal", length=400, mode="determinate")
+        self.progress_bar.pack(side="left", padx=(0, 20))
+        
+        self.progress_label = ttk.Label(self.progress_frame, text="0%", font=("Segoe UI", 12, "bold"))
+        self.progress_label.pack(side="left")
+
         self.summary_lbl = ttk.Label(self.card, text="", wraplength=700, justify="left")
         self.summary_lbl.pack(pady=5)
+
+        # Difficulty distribution frame
+        self.difficulty_frame = ttk.Frame(self.card)
+        self.difficulty_frame.pack(fill="x", pady=10)
+        
+        self.easy_label = ttk.Label(self.difficulty_frame, text="Easy: 0", foreground="#4ade80")
+        self.easy_label.pack(side="left", padx=(0, 10))
+        
+        self.medium_label = ttk.Label(self.difficulty_frame, text="Medium: 0", foreground="#fbbf24")
+        self.medium_label.pack(side="left", padx=(0, 10))
+        
+        self.hard_label = ttk.Label(self.difficulty_frame, text="Hard: 0", foreground="#f87171")
+        self.hard_label.pack(side="left")
 
         self.tree = ttk.Treeview(self.card, columns=("skill", "status"), show="headings", height=10)
         self.tree.heading("skill", text="Skill step")
@@ -1304,6 +1365,7 @@ class ProgressScreen(BaseScreen):
         nav = ttk.Frame(self.card)
         nav.pack(fill="x", pady=(10, 0))
         ttk.Button(nav, text="Back", command=lambda: controller.show_frame("SkillRoadmapScreen")).pack(side="left")
+        ttk.Button(nav, text="Dashboard", command=lambda: controller.show_frame("DashboardScreen")).pack(side="left", padx=5)
         ttk.Button(nav, text="History / Analytics", command=lambda: controller.show_frame("HistoryScreen")).pack(side="right")
 
     def on_show(self):
@@ -1321,24 +1383,78 @@ class ProgressScreen(BaseScreen):
         qs = UserSkillProgress.objects.filter(user_profile=user).select_related("step__skill", "skill_path")
         if not qs.exists():
             self.summary_lbl.config(text="No skill path is being tracked yet.")
+            self.progress_bar["value"] = 0
+            self.progress_label.config(text="0%")
+            self.easy_label.config(text="Easy: 0")
+            self.medium_label.config(text="Medium: 0")
+            self.hard_label.config(text="Hard: 0")
             return
 
         path = qs.first().skill_path
         summary = services.compute_progress_summary(user, path)
+        
+        # Update progress bar
+        self.progress_bar["maximum"] = 100
+        self.progress_bar["value"] = summary['percent']
+        self.progress_label.config(text=f"{summary['percent']}%")
+        
+        # Update difficulty labels
+        difficulty_parts = summary['difficulty_text'].split(", ")
+        easy_count = 0
+        medium_count = 0
+        hard_count = 0
+        
+        for part in difficulty_parts:
+            if "Easy:" in part:
+                easy_count = int(part.split(":")[1].strip())
+            elif "Medium:" in part:
+                medium_count = int(part.split(":")[1].strip())
+            elif "Hard:" in part:
+                hard_count = int(part.split(":")[1].strip())
+        
+        self.easy_label.config(text=f"Easy: {easy_count}")
+        self.medium_label.config(text=f"Medium: {medium_count}")
+        self.hard_label.config(text=f"Hard: {hard_count}")
+        
+        # Update milestone information
+        milestones_text = f"Milestones achieved: {summary.get('milestones_achieved', 0)}"
+        streak_text = f"Current streak: {summary.get('streak', 0)} days"
+        
+        # Get user's earned milestones
+        user_milestones = services.get_user_milestones(user)
+        
         self.summary_lbl.config(
             text=(
                 f"Tracking path: {path.name}\n"
                 f"Completed {summary['completed']} of {summary['total']} steps "
                 f"({summary['percent']}% done).\n"
-                f"Difficulty mix: {summary['difficulty_text']}"
+                f"{milestones_text} | {streak_text}\n"
             )
         )
+        
+        # Display earned milestones if any
+        if user_milestones:
+            milestone_text = "\nEarned Badges: "
+            for milestone in user_milestones[:3]:  # Show only first 3
+                badge_symbols = {"BRONZE": "🥉", "SILVER": "🥈", "GOLD": "🥇"}
+                symbol = badge_symbols.get(milestone['badge_type'], "🏆")
+                milestone_text += f"{symbol} {milestone['name']}  "
+            
+            # Add to summary label
+            current_text = self.summary_lbl.cget("text")
+            self.summary_lbl.config(text=current_text + milestone_text)
 
         for p in qs:
-            self.tree.insert("", tk.END, iid=str(p.id), values=(p.step.skill.name, p.get_status_display()))
+            # Add milestone indicator to status if achieved
+            status_display = p.get_status_display()
+            if p.milestone_achieved:
+                status_display += " 🏆"
+            
+            self.tree.insert("", tk.END, iid=str(p.id), values=(p.step.skill.name, status_display))
 
     def update_status(self, status_code: str):
         from recommender.models import UserSkillProgress
+        from recommender import services
 
         sel = self.tree.selection()
         if not sel:
@@ -1350,13 +1466,19 @@ class ProgressScreen(BaseScreen):
             prog = UserSkillProgress.objects.get(id=prog_id)
         except UserSkillProgress.DoesNotExist:
             return
-        prog.status = status_code
-        prog.save()
+        
+        # Use the new service function to update progress
+        services.update_skill_step_progress(
+            user=prog.user_profile,
+            step=prog.step,
+            status=status_code
+        )
         self.on_show()
 
     def _on_double_click(self, event):
         """Advance status in a simple cycle when the user double-clicks a row."""
         from recommender.models import UserSkillProgress
+        from recommender import services
 
         item_id = self.tree.identify_row(event.y)
         if not item_id:
@@ -1368,16 +1490,161 @@ class ProgressScreen(BaseScreen):
             return
 
         if prog.status == UserSkillProgress.NOT_STARTED:
-            prog.status = UserSkillProgress.IN_PROGRESS
+            new_status = UserSkillProgress.IN_PROGRESS
         elif prog.status == UserSkillProgress.IN_PROGRESS:
-            prog.status = UserSkillProgress.COMPLETED
+            new_status = UserSkillProgress.COMPLETED
         else:
             # Already completed; keep as-is
             return
 
-        prog.save()
+        # Use the new service function to update progress
+        services.update_skill_step_progress(
+            user=prog.user_profile,
+            step=prog.step,
+            status=new_status
+        )
         self.on_show()
 
+
+class DashboardScreen(BaseScreen):
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller)
+        
+        ttk.Label(self.card, text="Learning Dashboard", font=("Segoe UI", 16, "bold")).pack(pady=(0, 10))
+        
+        # Summary stats frame
+        self.stats_frame = ttk.Frame(self.card, style="Card.TFrame")
+        self.stats_frame.pack(fill="x", pady=10)
+        
+        # Charts frame
+        self.charts_frame = ttk.Frame(self.card, style="Card.TFrame")
+        self.charts_frame.pack(fill="both", expand=True, pady=10)
+        
+        # Recent activity frame
+        self.activity_frame = ttk.Frame(self.card, style="Card.TFrame")
+        self.activity_frame.pack(fill="x", pady=10)
+        
+        # Navigation
+        nav = ttk.Frame(self.card)
+        nav.pack(fill="x", pady=(10, 0))
+        ttk.Button(nav, text="Back", command=lambda: controller.show_frame("ProgressScreen")).pack(side="left")
+
+    def on_show(self):
+        # Clear previous content
+        for child in self.stats_frame.winfo_children():
+            child.destroy()
+            
+        for child in self.charts_frame.winfo_children():
+            child.destroy()
+            
+        for child in self.activity_frame.winfo_children():
+            child.destroy()
+        
+        user = self.controller.current_user
+        if not user:
+            return
+            
+        # Get user's progress data
+        from recommender.models import UserSkillProgress
+        from recommender import services
+        
+        # Stats section
+        stats_title = ttk.Label(self.stats_frame, text="Overview", font=("Segoe UI", 12, "bold"))
+        stats_title.pack(anchor="w", pady=(0, 10))
+        
+        # Get all user progress records
+        user_progress = UserSkillProgress.objects.filter(user_profile=user)
+        
+        if not user_progress.exists():
+            ttk.Label(self.stats_frame, text="No progress data available yet.").pack(anchor="w")
+            return
+            
+        # Calculate statistics
+        total_steps = user_progress.count()
+        completed_steps = user_progress.filter(status=UserSkillProgress.COMPLETED).count()
+        in_progress_steps = user_progress.filter(status=UserSkillProgress.IN_PROGRESS).count()
+        not_started_steps = user_progress.filter(status=UserSkillProgress.NOT_STARTED).count()
+        
+        completion_rate = int(round((completed_steps / total_steps) * 100)) if total_steps > 0 else 0
+        
+        # Get milestones
+        user_milestones = services.get_user_milestones(user)
+        milestones_count = len(user_milestones)
+        
+        # Display stats in a grid
+        stats_grid = ttk.Frame(self.stats_frame)
+        stats_grid.pack(fill="x")
+        
+        # Stat cards
+        stat_cards = [
+            {"title": "Total Steps", "value": total_steps, "color": "#60a5fa"},
+            {"title": "Completed", "value": completed_steps, "color": "#4ade80"},
+            {"title": "In Progress", "value": in_progress_steps, "color": "#fbbf24"},
+            {"title": "Completion Rate", "value": f"{completion_rate}%", "color": "#a78bfa"},
+            {"title": "Milestones", "value": milestones_count, "color": "#f87171"},
+        ]
+        
+        for i, stat in enumerate(stat_cards):
+            col = i % 3
+            row = i // 3
+            
+            card = ttk.Frame(stats_grid, style="Card.TFrame", padding=10)
+            card.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+            stats_grid.columnconfigure(col, weight=1)
+            
+            title_label = ttk.Label(card, text=stat["title"], font=("Segoe UI", 10))
+            title_label.pack(anchor="w")
+            
+            value_label = ttk.Label(card, text=str(stat["value"]), font=("Segoe UI", 16, "bold"), foreground=stat["color"])
+            value_label.pack(anchor="w")
+        
+        # Charts section
+        charts_title = ttk.Label(self.charts_frame, text="Progress Visualization", font=("Segoe UI", 12, "bold"))
+        charts_title.pack(anchor="w", pady=(0, 10))
+        
+        # Simple text-based chart for difficulty distribution
+        difficulty_chart = ttk.Frame(self.charts_frame)
+        difficulty_chart.pack(fill="x", pady=5)
+        
+        ttk.Label(difficulty_chart, text="Difficulty Distribution:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        
+        # Calculate difficulty distribution
+        difficulty_counts = {"Easy": 0, "Medium": 0, "Hard": 0}
+        for prog in user_progress.select_related("step__difficulty"):
+            label = prog.step.difficulty.label
+            difficulty_counts[label] = difficulty_counts.get(label, 0) + 1
+        
+        # Display as simple bar chart using text
+        chart_text = ""
+        max_count = max(difficulty_counts.values()) if difficulty_counts.values() else 1
+        
+        for difficulty, count in difficulty_counts.items():
+            bar_length = int((count / max_count) * 20) if max_count > 0 else 0
+            bar = "█" * bar_length
+            chart_text += f"{difficulty:8}: {bar} ({count})\n"
+        
+        chart_label = ttk.Label(difficulty_chart, text=chart_text, font=("Courier", 10), justify="left")
+        chart_label.pack(anchor="w", padx=10)
+        
+        # Activity section
+        activity_title = ttk.Label(self.activity_frame, text="Recent Achievements", font=("Segoe UI", 12, "bold"))
+        activity_title.pack(anchor="w", pady=(0, 10))
+        
+        if user_milestones:
+            for milestone in user_milestones[:5]:  # Show only first 5
+                badge_symbols = {"BRONZE": "🥉", "SILVER": "🥈", "GOLD": "🥇"}
+                symbol = badge_symbols.get(milestone['badge_type'], "🏆")
+                
+                activity_item = ttk.Frame(self.activity_frame, style="Card.TFrame", padding=5)
+                activity_item.pack(fill="x", pady=2)
+                
+                ttk.Label(
+                    activity_item, 
+                    text=f"{symbol} {milestone['name']} - Achieved on {milestone['achieved_at']}",
+                    font=("Segoe UI", 10)
+                ).pack(anchor="w")
+        else:
+            ttk.Label(self.activity_frame, text="No achievements yet. Keep learning!").pack(anchor="w")
 
 class HistoryScreen(BaseScreen):
     def __init__(self, parent, controller):
@@ -1437,6 +1704,8 @@ class AnalyticsScreen(BaseScreen):
         nav.pack(fill="x", pady=(10, 0))
         ttk.Button(nav, text="Back", command=lambda: controller.show_frame("HistoryScreen")).pack(side="left")
         ttk.Button(nav, text="Home", command=lambda: controller.show_frame("HomeScreen")).pack(side="right")
+        ttk.Button(nav, text="Feedback", command=lambda: controller.show_frame("FeedbackScreen")).pack(side="right", padx=(5, 0))
+        ttk.Button(nav, text="Accessibility", command=lambda: controller.show_frame("AccessibilitySettingsScreen")).pack(side="right", padx=(5, 0))
 
     def on_show(self):
         self.text.delete("1.0", tk.END)
@@ -1453,6 +1722,262 @@ class AnalyticsScreen(BaseScreen):
             self.text.insert(tk.END, f"Most popular skill path (by progress tracking): {most_path}\n")
         else:
             self.text.insert(tk.END, "No skill path progress data yet.\n")
+
+
+class FeedbackScreen(BaseScreen):
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller)
+
+        ttk.Label(self.card, text="Share Your Feedback", font=("Segoe UI", 16, "bold")).pack(pady=(0, 10))
+
+        ttk.Label(self.card, text="Help us improve your experience by sharing your feedback.\nYour input is valuable to us!", 
+                  font=("Segoe UI", 10)).pack(pady=(0, 20))
+
+        # Feedback type
+        ttk.Label(self.card, text="Feedback Type:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        self.feedback_type_var = tk.StringVar(value="GENERAL")
+        feedback_types = [
+            ("General Feedback", "GENERAL"),
+            ("Recommendation Quality", "RECOMMENDATION"),
+            ("User Interface", "UI_EXPERIENCE"),
+            ("Feature Request", "FEATURE_REQUEST"),
+            ("Bug Report", "BUG_REPORT"),
+        ]
+        
+        for text, value in feedback_types:
+            ttk.Radiobutton(self.card, text=text, variable=self.feedback_type_var, value=value).pack(anchor="w")
+
+        # Rating
+        ttk.Label(self.card, text="\nRating (1-5 stars):", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        self.rating_var = tk.IntVar(value=0)
+        rating_frame = ttk.Frame(self.card)
+        rating_frame.pack(anchor="w", pady=(5, 10))
+        
+        self.star_labels = []
+        for i in range(1, 6):
+            star_label = ttk.Label(rating_frame, text="☆", font=("Segoe UI", 16))
+            star_label.pack(side="left", padx=2)
+            star_label.bind("<Button-1>", lambda e, rating=i: self.set_rating(rating))
+            self.star_labels.append(star_label)
+
+        # Comment
+        ttk.Label(self.card, text="Comments:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        self.comment_text = tk.Text(self.card, height=5, width=60)
+        self.comment_text.pack(pady=(5, 10))
+
+        # Suggestions
+        ttk.Label(self.card, text="Suggestions for Improvement:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        self.suggestion_text = tk.Text(self.card, height=5, width=60)
+        self.suggestion_text.pack(pady=(5, 10))
+
+        # Buttons
+        button_frame = ttk.Frame(self.card)
+        button_frame.pack(fill="x", pady=(10, 0))
+        
+        ttk.Button(button_frame, text="Back", command=lambda: controller.show_frame("AnalyticsScreen")).pack(side="left")
+        ttk.Button(button_frame, text="Submit Feedback", command=self.submit_feedback).pack(side="right")
+        
+        # Success message label
+        self.success_label = ttk.Label(self.card, text="", foreground="green")
+        self.success_label.pack(pady=(10, 0))
+
+    def set_rating(self, rating):
+        """Set the rating and update star display."""
+        self.rating_var.set(rating)
+        for i, label in enumerate(self.star_labels):
+            if i < rating:
+                label.config(text="★")
+            else:
+                label.config(text="☆")
+
+    def submit_feedback(self):
+        """Submit the feedback to the database."""
+        feedback_type = self.feedback_type_var.get()
+        rating = self.rating_var.get() if self.rating_var.get() > 0 else None
+        comment = self.comment_text.get("1.0", tk.END).strip()
+        suggestion = self.suggestion_text.get("1.0", tk.END).strip()
+        
+        try:
+            services.submit_user_feedback(
+                user_profile=self.controller.current_user,
+                feedback_type=feedback_type,
+                rating=rating,
+                comment=comment,
+                suggestion=suggestion
+            )
+            
+            # Show success message
+            self.success_label.config(text="Thank you for your feedback! We appreciate your input.")
+            
+            # Clear form
+            self.feedback_type_var.set("GENERAL")
+            self.rating_var.set(0)
+            self.comment_text.delete("1.0", tk.END)
+            self.suggestion_text.delete("1.0", tk.END)
+            
+            # Reset stars
+            for label in self.star_labels:
+                label.config(text="☆")
+                
+            # Clear success message after 3 seconds
+            self.after(3000, lambda: self.success_label.config(text=""))
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to submit feedback: {str(e)}")
+
+class AccessibilitySettingsScreen(BaseScreen):
+    def __init__(self, parent, controller):
+        super().__init__(parent, controller)
+
+        ttk.Label(self.card, text="Accessibility Settings", font=("Segoe UI", 16, "bold")).pack(pady=(0, 10))
+
+        ttk.Label(self.card, text="Customize your experience for better accessibility.", 
+                  font=("Segoe UI", 10)).pack(pady=(0, 20))
+
+        # Text-to-Speech Settings
+        ttk.Label(self.card, text="Text-to-Speech Settings:", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(10, 5))
+        
+        # Speech Rate
+        rate_frame = ttk.Frame(self.card)
+        rate_frame.pack(fill="x", pady=5)
+        ttk.Label(rate_frame, text="Speech Rate:").pack(side="left")
+        self.rate_var = tk.IntVar(value=150)
+        rate_scale = ttk.Scale(rate_frame, from_=50, to=300, variable=self.rate_var, orient="horizontal", command=self.update_rate_display)
+        rate_scale.pack(side="left", padx=10, fill="x", expand=True)
+        self.rate_display = ttk.Label(rate_frame, text="150")
+        self.rate_display.pack(side="left", padx=(10, 0))
+
+        # Speech Volume
+        volume_frame = ttk.Frame(self.card)
+        volume_frame.pack(fill="x", pady=5)
+        ttk.Label(volume_frame, text="Volume:").pack(side="left")
+        self.volume_var = tk.DoubleVar(value=0.9)
+        volume_scale = ttk.Scale(volume_frame, from_=0.0, to=1.0, variable=self.volume_var, orient="horizontal", command=self.update_volume_display)
+        volume_scale.pack(side="left", padx=10, fill="x", expand=True)
+        self.volume_display = ttk.Label(volume_frame, text="90%")
+        self.volume_display.pack(side="left", padx=(10, 0))
+
+        # Voice Selection
+        voice_frame = ttk.Frame(self.card)
+        voice_frame.pack(fill="x", pady=5)
+        ttk.Label(voice_frame, text="Voice:").pack(side="left")
+        self.voice_var = tk.StringVar()
+        self.voice_combo = ttk.Combobox(voice_frame, textvariable=self.voice_var, state="readonly", width=30)
+        self.voice_combo.pack(side="left", padx=10)
+        
+        # Test Button
+        test_frame = ttk.Frame(self.card)
+        test_frame.pack(fill="x", pady=(10, 20))
+        ttk.Button(test_frame, text="Test Speech", command=self.test_speech).pack(side="left")
+        
+        # Apply Button
+        apply_frame = ttk.Frame(self.card)
+        apply_frame.pack(fill="x", pady=(10, 0))
+        ttk.Button(apply_frame, text="Apply Settings", command=self.apply_settings).pack(side="left")
+        ttk.Button(apply_frame, text="Reset to Defaults", command=self.reset_defaults).pack(side="left", padx=10)
+        ttk.Button(apply_frame, text="Back", command=lambda: controller.show_frame("AnalyticsScreen")).pack(side="right")
+        
+        # Status message
+        self.status_label = ttk.Label(self.card, text="", foreground="green")
+        self.status_label.pack(pady=(10, 0))
+        
+        # Initialize voice options
+        self.populate_voice_options()
+
+    def populate_voice_options(self):
+        """Populate voice selection combobox with available voices."""
+        if self.controller.tts_engine:
+            try:
+                voices = self.controller.tts_engine.getProperty('voices')
+                voice_names = [f"{voice.name} ({voice.id})" for voice in voices]
+                self.voice_combo['values'] = voice_names
+                
+                # Select current voice
+                current_voice = self.controller.tts_engine.getProperty('voice')
+                for i, voice in enumerate(voices):
+                    if voice.id == current_voice:
+                        self.voice_combo.current(i)
+                        break
+            except Exception as e:
+                print(f"Error populating voices: {e}")
+
+    def update_rate_display(self, value):
+        """Update the rate display label."""
+        self.rate_display.config(text=str(int(float(value))))
+
+    def update_volume_display(self, value):
+        """Update the volume display label."""
+        self.volume_display.config(text=f"{int(float(value)*100)}%")
+
+    def test_speech(self):
+        """Test the current speech settings."""
+        if self.controller.tts_engine:
+            try:
+                # Save current settings temporarily
+                current_rate = self.controller.tts_engine.getProperty('rate')
+                current_volume = self.controller.tts_engine.getProperty('volume')
+                
+                # Apply test settings
+                self.controller.tts_engine.setProperty('rate', self.rate_var.get())
+                self.controller.tts_engine.setProperty('volume', self.volume_var.get())
+                
+                # Speak test phrase
+                self.controller.tts_engine.say("This is a test of the text-to-speech settings.")
+                self.controller.tts_engine.runAndWait()
+                
+                # Restore previous settings
+                self.controller.tts_engine.setProperty('rate', current_rate)
+                self.controller.tts_engine.setProperty('volume', current_volume)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to test speech: {str(e)}")
+
+    def apply_settings(self):
+        """Apply the selected accessibility settings."""
+        if self.controller.tts_engine:
+            try:
+                # Apply settings
+                self.controller.tts_engine.setProperty('rate', self.rate_var.get())
+                self.controller.tts_engine.setProperty('volume', self.volume_var.get())
+                
+                # Apply voice if selected
+                if self.voice_var.get():
+                    # Extract voice ID from combo box text
+                    voice_text = self.voice_var.get()
+                    voice_id = voice_text.split("(")[-1].rstrip(")")
+                    self.controller.tts_engine.setProperty('voice', voice_id)
+                
+                # Show success message
+                self.status_label.config(text="Settings applied successfully!")
+                
+                # Clear success message after 3 seconds
+                self.after(3000, lambda: self.status_label.config(text=""))
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to apply settings: {str(e)}")
+
+    def reset_defaults(self):
+        """Reset settings to defaults."""
+        self.rate_var.set(150)
+        self.volume_var.set(0.9)
+        
+        # Update displays
+        self.update_rate_display(150)
+        self.update_volume_display(0.9)
+        
+        # Try to select a female voice if available
+        if self.controller.tts_engine:
+            try:
+                voices = self.controller.tts_engine.getProperty('voices')
+                for i, voice in enumerate(voices):
+                    if 'female' in voice.name.lower() or 'zira' in voice.name.lower():
+                        self.voice_combo.current(i)
+                        break
+            except Exception as e:
+                print(f"Error resetting voice: {e}")
+        
+        self.status_label.config(text="Defaults restored. Click Apply to save.")
+        
+        # Clear success message after 3 seconds
+        self.after(3000, lambda: self.status_label.config(text=""))
 
 
 def show_login_window():

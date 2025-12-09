@@ -236,6 +236,13 @@ class UserSkillProgress(models.Model):
     step = models.ForeignKey(SkillPathStep, on_delete=models.CASCADE)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=NOT_STARTED)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Milestone tracking
+    milestone_achieved = models.BooleanField(default=False)
+    milestone_date = models.DateTimeField(null=True, blank=True)
+    
+    # Progress tracking for steps (0-100%)
+    step_progress = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = ("user_profile", "step")
@@ -273,3 +280,124 @@ class ActivitySuggestion(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class LearningResource(models.Model):
+    RESOURCE_TYPES = [
+        ('VIDEO', 'YouTube Video'),
+        ('ARTICLE', 'Article/Blog'),
+        ('COURSE', 'Online Course'),
+        ('BOOK', 'Book/Document'),
+    ]
+    
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    url = models.URLField()
+    resource_type = models.CharField(max_length=16, choices=RESOURCE_TYPES, default='VIDEO')
+    stage = models.ForeignKey(EducationStage, on_delete=models.SET_NULL, null=True, blank=True)
+    stream = models.ForeignKey(Stream, on_delete=models.SET_NULL, null=True, blank=True)
+    skill = models.ForeignKey(Skill, on_delete=models.SET_NULL, null=True, blank=True)
+    career = models.ForeignKey(Career, on_delete=models.SET_NULL, null=True, blank=True)
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    difficulty = models.ForeignKey(SkillDifficulty, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self) -> str:
+        return self.title
+
+
+class UserLearningProgress(models.Model):
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    
+    STATUS_CHOICES = [
+        (NOT_STARTED, "Not started"),
+        (IN_PROGRESS, "In progress"),
+        (COMPLETED, "Completed"),
+    ]
+    
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    resource = models.ForeignKey(LearningResource, on_delete=models.CASCADE)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=NOT_STARTED)
+    progress_percent = models.PositiveIntegerField(default=0)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ("user_profile", "resource")
+    
+    def __str__(self) -> str:
+        return f"{self.user_profile} - {self.resource} - {self.status}"
+
+
+class Milestone(models.Model):
+    """Represents achievement milestones in the learning journey."""
+    BADGE_BRONZE = "BRONZE"
+    BADGE_SILVER = "SILVER"
+    BADGE_GOLD = "GOLD"
+    
+    BADGE_CHOICES = [
+        (BADGE_BRONZE, "Bronze"),
+        (BADGE_SILVER, "Silver"),
+        (BADGE_GOLD, "Gold"),
+    ]
+    
+    name = models.CharField(max_length=128)
+    description = models.TextField(blank=True)
+    badge_type = models.CharField(max_length=16, choices=BADGE_CHOICES, default=BADGE_BRONZE)
+    required_progress_percent = models.PositiveIntegerField(default=100)  # For skill completion
+    required_completed_steps = models.PositiveIntegerField(default=0)  # For number of steps completed
+    required_streak_days = models.PositiveIntegerField(default=0)  # For consecutive days
+    
+    def __str__(self) -> str:
+        return f"{self.name} ({self.badge_type})"
+
+
+class UserMilestone(models.Model):
+    """Tracks which milestones a user has achieved."""
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    milestone = models.ForeignKey(Milestone, on_delete=models.CASCADE)
+    achieved_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        unique_together = ("user_profile", "milestone")
+        ordering = ["-achieved_at"]
+    
+    def __str__(self) -> str:
+        return f"{self.user_profile} - {self.milestone} - {self.achieved_at:%Y-%m-%d}"
+
+
+class Feedback(models.Model):
+    """Collects user feedback on recommendations and application experience."""
+    FEEDBACK_TYPES = [
+        ('RECOMMENDATION', 'Recommendation Quality'),
+        ('UI_EXPERIENCE', 'User Interface'),
+        ('FEATURE_REQUEST', 'Feature Request'),
+        ('BUG_REPORT', 'Bug Report'),
+        ('GENERAL', 'General Feedback'),
+    ]
+    
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, null=True, blank=True)
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES, default='GENERAL')
+    rating = models.PositiveIntegerField(null=True, blank=True, help_text="Rating from 1-5 stars")
+    comment = models.TextField(blank=True)
+    suggestion = models.TextField(blank=True, help_text="Suggestions for improvement")
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "User Feedback"
+        verbose_name_plural = "User Feedback"
+    
+    def __str__(self) -> str:
+        return f"Feedback from {self.user_profile or 'Anonymous'} - {self.feedback_type} ({self.created_at:%Y-%m-%d})"

@@ -1,118 +1,151 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Launcher script for Edu & Skill Path Recommender.
-Allows users to choose between Tkinter and Kivy interfaces.
+Edu & Skill Path Recommender Launcher
+=====================================
+
+This script provides an easy way to launch the Edu & Skill Path Recommender application.
+It handles environment setup and launches the Kivy-based GUI.
+
+Requirements:
+- Python 3.8+
+- Django
+- Kivy
 """
 
 import os
 import sys
-import tkinter as tk
-from tkinter import ttk, messagebox
+import subprocess
+import argparse
+from pathlib import Path
 
+def check_python_version():
+    """Check if Python version is compatible."""
+    if sys.version_info < (3, 8):
+        print("Error: Python 3.8 or higher is required.")
+        print(f"You are using Python {sys.version}")
+        return False
+    return True
 
-def launch_tkinter():
-    """Launch the Tkinter version of the application."""
-    try:
-        # Import and run the Tkinter app
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("desktop_app", "desktop_app.py")
-        desktop_app = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(desktop_app)
-        desktop_app.main()
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to launch Tkinter app: {e}")
-
-
-def launch_kivy():
-    """Launch the Kivy version of the application."""
-    try:
-        # Import and run the Kivy app
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("kivy_app", "kivy_app.py")
-        kivy_app = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(kivy_app)
-        kivy_app.EduSkillRecommenderApp().run()
-    except ImportError:
-        messagebox.showerror("Error", "Kivy is not installed. Please install it with 'pip install kivy' to use this interface.")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to launch Kivy app: {e}")
-
-
-class LauncherApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Edu & Skill Path Recommender - Launcher")
-        self.geometry("400x300")
-        self.resizable(False, False)
-        
-        # Center the window
-        self.update_idletasks()
-        x = (self.winfo_screenwidth() // 2) - (400 // 2)
-        y = (self.winfo_screenheight() // 2) - (300 // 2)
-        self.geometry(f"400x300+{x}+{y}")
-        
-        # Create UI
-        self.create_widgets()
+def check_dependencies():
+    """Check if required dependencies are installed."""
+    missing_packages = []
     
-    def create_widgets(self):
-        # Title
-        title = ttk.Label(
-            self, 
-            text="Edu & Skill Path Recommender", 
-            font=("Arial", 16, "bold")
-        )
-        title.pack(pady=20)
-        
-        # Description
-        desc = ttk.Label(
-            self,
-            text="Choose your preferred interface:",
-            font=("Arial", 12)
-        )
-        desc.pack(pady=10)
-        
-        # Tkinter button
-        tk_btn = ttk.Button(
-            self,
-            text="🖥️ Tkinter Interface",
-            command=launch_tkinter,
-            width=25
-        )
-        tk_btn.pack(pady=15)
-        
-        # Kivy button
-        kivy_btn = ttk.Button(
-            self,
-            text="📱 Kivy Interface",
-            command=launch_kivy,
-            width=25
-        )
-        kivy_btn.pack(pady=15)
-        
-        # Info text
-        info = ttk.Label(
-            self,
-            text="Both interfaces provide the same functionality.\nChoose based on your preference.",
-            font=("Arial", 10),
-            foreground="gray"
-        )
-        info.pack(pady=20)
-        
-        # Exit button
-        exit_btn = ttk.Button(
-            self,
-            text="Exit",
-            command=self.quit,
-            width=15
-        )
-        exit_btn.pack(pady=10)
+    try:
+        import django
+        print(f"Django version: {django.VERSION}")
+    except ImportError:
+        missing_packages.append("Django")
+    
+    try:
+        import kivy
+        print(f"Kivy version: {kivy.__version__}")
+    except ImportError:
+        missing_packages.append("Kivy")
+    
+    if missing_packages:
+        print(f"Missing packages: {', '.join(missing_packages)}")
+        print("Please install them using:")
+        print(f"  pip install {' '.join(missing_packages)}")
+        return False
+    
+    return True
 
+def setup_django():
+    """Setup Django environment."""
+    # Add project directory to Python path
+    project_dir = Path(__file__).parent.absolute()
+    if str(project_dir) not in sys.path:
+        sys.path.insert(0, str(project_dir))
+    
+    # Set Django settings
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'edu_skill_recommender.settings')
+    
+    try:
+        import django
+        django.setup()
+        print("Django setup completed successfully.")
+        return True
+    except Exception as e:
+        print(f"Error setting up Django: {e}")
+        return False
+
+def run_database_migrations():
+    """Run database migrations if needed."""
+    try:
+        from django.core.management import execute_from_command_line
+        execute_from_command_line(['manage.py', 'migrate'])
+        print("Database migrations completed.")
+        return True
+    except Exception as e:
+        print(f"Error running migrations: {e}")
+        return False
+
+def seed_database():
+    """Seed database with initial data."""
+    try:
+        from django.core.management import execute_from_command_line
+        print("Seeding database with initial data...")
+        execute_from_command_line(['manage.py', 'seed_recommender'])
+        execute_from_command_line(['manage.py', 'import_comprehensive_data'])
+        print("Database seeding completed.")
+        return True
+    except Exception as e:
+        print(f"Error seeding database: {e}")
+        return False
+
+def launch_gui():
+    """Launch the Kivy GUI application."""
+    try:
+        print("Launching Edu & Skill Path Recommender...")
+        from kivy_app import EduSkillRecommenderApp
+        EduSkillRecommenderApp().run()
+        return True
+    except Exception as e:
+        print(f"Error launching GUI: {e}")
+        return False
 
 def main():
-    """Main entry point for the launcher."""
-    app = LauncherApp()
-    app.mainloop()
-
+    """Main launcher function."""
+    print("=" * 50)
+    print("Edu & Skill Path Recommender")
+    print("=" * 50)
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Launch Edu & Skill Path Recommender')
+    parser.add_argument('--setup', action='store_true', help='Run initial setup')
+    parser.add_argument('--seed', action='store_true', help='Seed database with data')
+    parser.add_argument('--migrate', action='store_true', help='Run database migrations')
+    args = parser.parse_args()
+    
+    # Check Python version
+    if not check_python_version():
+        sys.exit(1)
+    
+    # Check dependencies
+    if not check_dependencies():
+        print("\nPlease install the missing dependencies and try again.")
+        sys.exit(1)
+    
+    # Setup Django
+    if not setup_django():
+        print("\nFailed to setup Django environment.")
+        sys.exit(1)
+    
+    # Handle command line arguments
+    if args.migrate or args.setup:
+        if not run_database_migrations():
+            print("\nFailed to run database migrations.")
+            sys.exit(1)
+    
+    if args.seed or args.setup:
+        if not seed_database():
+            print("\nFailed to seed database.")
+            sys.exit(1)
+    
+    # Launch GUI
+    if not launch_gui():
+        print("\nFailed to launch GUI application.")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
