@@ -36,19 +36,26 @@ Technologies used (as required):
 - Text-to-speech functionality for accessibility.
 - Two interface options: Tkinter (traditional desktop) and Kivy (modern touch interface, optional).
 - Launcher application to easily choose between interfaces.
+- **NEW: User Feedback System** - Collect and analyze user feedback to improve the application.
+- **NEW: Accessibility Settings** - Customizable text-to-speech settings for better user experience.
+- **NEW: Milestone Tracking** - Achievement badges and progress milestones.
+- **NEW: Interactive Dashboards** - Visual progress tracking and analytics.
+- **NEW: Learning Resources** - Curated YouTube videos and learning materials.
 
 ## Project structure
 
 - `manage.py` – standard Django management entry point.
 - `edu_skill_recommender/` – Django project settings and URLs.
 - `recommender/` – core app with:
-  - `models.py` – stages, profiles, interests, questions, streams, careers, skills, paths, rules, history, progress, tips, activities.
+  - `models.py` – stages, profiles, interests, questions, streams, careers, skills, paths, rules, history, progress, tips, activities, feedback, milestones, learning resources.
   - `admin.py` – Django admin registrations (only admins use web admin).
-  - `services.py` – rule-based recommendation logic and offline analytics.
-  - `management/commands/seed_recommender.py` – sample seed data.
+  - `services.py` – rule-based recommendation logic, offline analytics, and feedback processing.
+  - `tests.py` – Unit tests for models and services.
+  - `management/commands/seed_recommender.py` – sample seed data including feedback and milestones.
 - `desktop_app.py` – Tkinter desktop GUI that uses Django ORM and services.
 - `kivy_app.py` – Kivy desktop GUI that uses Django ORM and services.
 - `launcher.py` – Simple launcher to choose between Tkinter and Kivy interfaces.
+- `test_gui.py` – Tests for GUI components.
 
 ## Setup instructions
 
@@ -77,7 +84,7 @@ Technologies used (as required):
    python manage.py migrate
    ```
 
-4. **Seed sample data** (stages, streams, careers, skills, paths, basic questions, tips)
+4. **Seed sample data** (stages, streams, careers, skills, paths, basic questions, tips, feedback, milestones)
 
    ```bash
    python manage.py seed_recommender
@@ -119,6 +126,7 @@ Technologies used (as required):
    - Question sets and option scores
    - Skills and skill paths
    - Motivation tips and activity suggestions
+   - Feedback and milestone configurations
 
 ## Desktop UI walkthrough (Tkinter version)
 
