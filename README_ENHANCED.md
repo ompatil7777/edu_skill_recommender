@@ -1,4 +1,4 @@
-# Edu & Skill Path Recommender (Enhanced Desktop, Offline)
+# Edu & Skill Path Recommender (Enhanced Version)
 
 Technologies used (as required):
 - **Language:** Python
@@ -36,19 +36,26 @@ Technologies used (as required):
 - Text-to-speech functionality for accessibility.
 - Two interface options: Tkinter (traditional desktop) and Kivy (modern touch interface, optional).
 - Launcher application to easily choose between interfaces.
+- **NEW: User Feedback System** - Collect and analyze user feedback to improve the application.
+- **NEW: Accessibility Settings** - Customizable text-to-speech settings for better user experience.
+- **NEW: Milestone Tracking** - Achievement badges and progress milestones.
+- **NEW: Interactive Dashboards** - Visual progress tracking and analytics.
+- **NEW: Learning Resources** - Curated YouTube videos and learning materials.
 
 ## Project structure
 
 - `manage.py` – standard Django management entry point.
 - `edu_skill_recommender/` – Django project settings and URLs.
 - `recommender/` – core app with:
-  - `models.py` – stages, profiles, interests, questions, streams, careers, skills, paths, rules, history, progress, tips, activities.
+  - `models.py` – stages, profiles, interests, questions, streams, careers, skills, paths, rules, history, progress, tips, activities, feedback, milestones, learning resources.
   - `admin.py` – Django admin registrations (only admins use web admin).
-  - `services.py` – rule-based recommendation logic and offline analytics.
-  - `management/commands/seed_recommender.py` – sample seed data.
+  - `services.py` – rule-based recommendation logic, offline analytics, and feedback processing.
+  - `tests.py` – Unit tests for models and services.
+  - `management/commands/seed_recommender.py` – sample seed data including feedback and milestones.
 - `desktop_app.py` – Tkinter desktop GUI that uses Django ORM and services.
 - `kivy_app.py` – Kivy desktop GUI that uses Django ORM and services.
 - `launcher.py` – Simple launcher to choose between Tkinter and Kivy interfaces.
+- `test_gui.py` – Tests for GUI components.
 
 ## Setup instructions
 
@@ -59,16 +66,12 @@ Technologies used (as required):
    .venv\Scripts\activate  # on Windows
    ```
 
-2. **Install Django** (if not already installed)
+2. **Install Django and other dependencies**
 
    ```bash
    pip install django
-   ```
-   
-   Optionally, to use the Kivy interface:
-   
-   ```bash
    pip install kivy
+   pip install pyttsx3
    ```
 
 3. **Apply migrations**
@@ -77,7 +80,7 @@ Technologies used (as required):
    python manage.py migrate
    ```
 
-4. **Seed sample data** (stages, streams, careers, skills, paths, basic questions, tips)
+4. **Seed sample data** (stages, streams, careers, skills, paths, basic questions, tips, feedback, milestones)
 
    ```bash
    python manage.py seed_recommender
@@ -119,14 +122,9 @@ Technologies used (as required):
    - Question sets and option scores
    - Skills and skill paths
    - Motivation tips and activity suggestions
+   - Feedback and milestone configurations
 
-## Desktop UI walkthrough (Tkinter version)
-
-1. **Home Screen**
-
-## Desktop UI walkthrough (Kivy version)
-
-The Kivy version provides the same functionality as the Tkinter version with a modern touch interface. All features are identical:
+## Enhanced Desktop UI walkthrough (Tkinter version)
 
 1. **Home Screen**
    - Choose who you are:
@@ -148,9 +146,9 @@ The Kivy version provides the same functionality as the Tkinter version with a m
 3. **Interest & Aptitude Questionnaire**
    - You see ~2–5 questions (can be extended in admin) for your stage.
    - Each question has simple options like:
-     - “I enjoy them a lot”
-     - “They are okay”
-     - “I avoid them”
+     - "I enjoy them a lot"
+     - "They are okay"
+     - "I avoid them"
    - Each option contributes rule-based scores to categories:
      - Logical, Analytical, Creative, Practical, People, Scientific, Design.
 
@@ -177,17 +175,18 @@ The Kivy version provides the same functionality as the Tkinter version with a m
      - Shows a career switch roadmap (e.g. Call Center → Cloud Support Engineer) with steps and time estimates.
    - For **UG/PG**:
      - Brief text before moving to skill roadmaps.
+   - **NEW: Text-to-Speech** - Listen to recommendations with the "🔊 Read Recommendations" button.
 
 6. **Skill Roadmap Screen**
    - Shows **Plan A / Plan B / Plan C** skill paths:
-     - Example: “Cloud Support Engineer Path”
+     - Example: "Cloud Support Engineer Path"
        - Linux Basics (Easy, Level 1, 2 weeks)
        - Networking (Medium, Level 2, 3 weeks)
        - AWS Core Services (Medium, Level 2, 3 weeks)
        - IAM & Security (Hard, Level 3, 3 weeks)
        - Monitoring (Medium, Level 3, 2 weeks)
        - Scripting (Medium, Level 4, 3 weeks)
-     - Example: “Full-Stack Python Developer Path”
+     - Example: "Full-Stack Python Developer Path"
        - Python Basics → Python OOP → Django → SQL → Deployment
    - Levels follow:
      - Level 1 – Foundations
@@ -195,6 +194,7 @@ The Kivy version provides the same functionality as the Tkinter version with a m
      - Level 3 – Tools / Frameworks
      - Level 4 – Projects / Deployment
    - When opened, the app initializes progress tracking for the primary path (Plan A).
+   - **NEW: Text-to-Speech** - Listen to roadmaps with the "🔊 Read Roadmaps" button.
 
 7. **Progress Screen**
    - Shows the skills for the tracked path in a simple table:
@@ -207,19 +207,109 @@ The Kivy version provides the same functionality as the Tkinter version with a m
    - At the top you see a summary:
      - `Completed X of Y (Z%)`
      - Difficulty mix (Easy / Medium / Hard counts).
+     - **NEW: Progress Bar** - Visual representation of completion percentage.
+     - **NEW: Milestone Tracking** - Display of earned achievements and badges.
+     - **NEW: Streak Counter** - Track consecutive days of learning.
 
-8. **History Screen**
-   - Lists past recommendation sessions for the current user.
-   - Selecting a session shows stored input data and recommended streams/paths.
+8. **Dashboard Screen**
+   - **NEW: Interactive Dashboard** with comprehensive progress visualization:
+     - Statistics cards for Total Steps, Completed, In Progress, Completion Rate, and Milestones.
+     - Difficulty distribution chart.
+     - Recent achievements feed with badge icons.
+     - Navigation to Feedback and Accessibility Settings.
 
-9. **Analytics Screen**
-   - Uses raw SQL queries to show:
-     - Most frequently recommended stream (from history JSON text).
-     - Most popular skill path (from tracked progress records).
-   - Output is text-only, no graphs.
+9. **Feedback Screen**
+   - **NEW: User Feedback System**:
+     - Select feedback type (Recommendation Quality, User Interface, Feature Request, Bug Report, General).
+     - Rate experience with 1-5 stars.
+     - Provide detailed comments and suggestions.
+     - Submit feedback for continuous improvement.
+
+10. **Accessibility Settings Screen**
+    - **NEW: Customizable Accessibility Features**:
+      - Adjust speech rate (50-300 words per minute).
+      - Control volume (0-100%).
+      - Select from available system voices.
+      - Test settings with sample speech.
+      - Apply or reset to defaults.
+
+11. **History Screen**
+    - Lists past recommendation sessions for the current user.
+    - Selecting a session shows stored input data and recommended streams/paths.
+
+12. **Analytics Screen**
+    - Uses raw SQL queries to show:
+      - Most frequently recommended stream (from history JSON text).
+      - Most popular skill path (from tracked progress records).
+    - Output is text-only, no graphs.
+    - Access to Feedback and Accessibility Settings.
+
+## Enhanced Desktop UI walkthrough (Kivy version)
+
+The Kivy version provides the same enhanced functionality as the Tkinter version with a modern touch interface:
+
+1. **Home Screen**
+   - Same functionality as Tkinter version.
+
+2. **Stage Selection**
+   - Same functionality as Tkinter version.
+
+3. **Interest & Aptitude Questionnaire**
+   - Same functionality as Tkinter version.
+
+4. **Subject Strengths (Class 9–12 only)**
+   - Same functionality as Tkinter version.
+
+5. **Results Screen**
+   - Same functionality as Tkinter version with enhanced visual design.
+
+6. **Skill Roadmap Screen**
+   - Same functionality as Tkinter version with enhanced visual design.
+
+7. **Progress Tracking Screen**
+   - Same functionality as Tkinter version's Progress Screen with enhanced visual design.
+   - **NEW: Progress Bar** - Visual representation of completion percentage.
+   - **NEW: Milestone Tracking** - Display of earned achievements and badges.
+
+8. **Dashboard Screen**
+   - **NEW: Interactive Dashboard** with comprehensive progress visualization.
+   - Modern card-based layout for statistics.
+   - Visual difficulty distribution chart.
+   - Recent achievements feed with colored badge icons.
+
+9. **Feedback Screen**
+   - **NEW: User Feedback System** with touch-friendly interface.
+   - Intuitive star rating system.
+   - Easy submission of comments and suggestions.
+
+10. **Accessibility Settings Screen**
+    - **NEW: Customizable Accessibility Features** with slider controls.
+    - Touch-friendly interface for adjusting speech settings.
+    - Real-time preview of settings changes.
+
+11. **Learning Resources Screen**
+    - **NEW: Curated Learning Resources**:
+      - YouTube video recommendations based on user profile.
+      - Direct links to learning materials.
+      - Duration information for each resource.
+
+12. **Professional Development Screen**
+    - **NEW: Career Transition Planning** for professionals:
+      - Detailed roadmaps for career switches.
+      - Timeline estimates for transitions.
+      - Skill gap analysis.
+
+## Testing
+
+The application includes comprehensive tests:
+- Unit tests for models and services in `recommender/tests.py`
+- GUI component tests in `test_gui.py`
+
+Run tests with: `python manage.py test`
 
 ## Notes
 
 - All recommendations are **rule-based**, implemented in Python in `recommender/services.py`.
 - The system runs 100% offline using SQLite.
-- Django admin is only for admins to maintain data; students and other users interact only through the Tkinter desktop app.
+- Django admin is only for admins to maintain data; students and other users interact only through the desktop apps.
+- **NEW: Enhanced User Experience** with feedback collection, accessibility features, and interactive dashboards.
