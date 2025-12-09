@@ -185,17 +185,18 @@ The Kivy version provides the same functionality as the Tkinter version with a m
      - Shows a career switch roadmap (e.g. Call Center → Cloud Support Engineer) with steps and time estimates.
    - For **UG/PG**:
      - Brief text before moving to skill roadmaps.
+   - **NEW: Text-to-Speech** - Listen to recommendations with the "🔊 Read Recommendations" button.
 
 6. **Skill Roadmap Screen**
    - Shows **Plan A / Plan B / Plan C** skill paths:
-     - Example: “Cloud Support Engineer Path”
+     - Example: "Cloud Support Engineer Path"
        - Linux Basics (Easy, Level 1, 2 weeks)
        - Networking (Medium, Level 2, 3 weeks)
        - AWS Core Services (Medium, Level 2, 3 weeks)
        - IAM & Security (Hard, Level 3, 3 weeks)
        - Monitoring (Medium, Level 3, 2 weeks)
        - Scripting (Medium, Level 4, 3 weeks)
-     - Example: “Full-Stack Python Developer Path”
+     - Example: "Full-Stack Python Developer Path"
        - Python Basics → Python OOP → Django → SQL → Deployment
    - Levels follow:
      - Level 1 – Foundations
@@ -203,6 +204,7 @@ The Kivy version provides the same functionality as the Tkinter version with a m
      - Level 3 – Tools / Frameworks
      - Level 4 – Projects / Deployment
    - When opened, the app initializes progress tracking for the primary path (Plan A).
+   - **NEW: Text-to-Speech** - Listen to roadmaps with the "🔊 Read Roadmaps" button.
 
 7. **Progress Screen**
    - Shows the skills for the tracked path in a simple table:
@@ -215,6 +217,9 @@ The Kivy version provides the same functionality as the Tkinter version with a m
    - At the top you see a summary:
      - `Completed X of Y (Z%)`
      - Difficulty mix (Easy / Medium / Hard counts).
+     - **NEW: Progress Bar** - Visual representation of completion percentage.
+     - **NEW: Milestone Tracking** - Display of earned achievements and badges.
+     - **NEW: Streak Counter** - Track consecutive days of learning.
 
 8. **History Screen**
    - Lists past recommendation sessions for the current user.
